@@ -100,3 +100,12 @@ a {
   color: #4073af;
   text-decoration: none;
 }
+
+.skill-reason {
+  font-size: 0.85rem;
+  color: #444;
+  margin-top: 0.35rem;
+  margin-left: 0.25rem;
+  font-style: italic;
+  line-height: 1.35;
+}

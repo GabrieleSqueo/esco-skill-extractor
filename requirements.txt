@@ -2,3 +2,5 @@ sentence-transformers
 Flask
 pandas
 waitress
+google-genai
+python-dotenv

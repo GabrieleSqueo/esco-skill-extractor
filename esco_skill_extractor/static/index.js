@@ -1,3 +1,11 @@
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 /**
  * This function is called when the form is submitted to ask the server to extract an entity from the text.
  * Then it updates the DOM with the extracted entities.
@@ -19,20 +27,51 @@ async function extractEntity(event) {
   });
 
   const data = await response.json();
-  const skillsStr = data[0].join(", ");
+  if (!response.ok) {
+    const msg =
+      data && typeof data.error === "string" ? data.error : "Request failed";
+    output.innerHTML = `<p>${escapeHtml(msg)}</p>`;
+    return;
+  }
+
+  const row = Array.isArray(data) && Array.isArray(data[0]) ? data[0] : [];
+  const items =
+    entity === "skills"
+      ? row.map((s) => {
+          if (typeof s === "string") {
+            return { href: s, text: s, reason: "" };
+          }
+          const uri = s && s.uri;
+          const label =
+            s && (s.label_en ?? s.labelEn ?? s.label_it ?? s.labelIt);
+          const reason = (s && s.reason) || "";
+          return {
+            href: uri || "#",
+            text: label || uri || "",
+            reason,
+          };
+        })
+      : row.map((u) => ({ href: u, text: u, reason: "" }));
+  const skillsStr = items.map((i) => i.text).join(", ");
 
   output.innerHTML = `
-    <button onclick="copyToClipboard('${skillsStr}')" id="copyButton"> Copy CSV </button>
+    <button type="button" id="copyButton"> Copy CSV </button>
     <ul>
-      ${data[0]
-        .map(
-          (skill) =>
-            `<li> 
-              <a href="${skill}"> ${skill} </a> 
-            </li>`
-        )
+      ${items
+        .map((item) => {
+          const reasonBlock = item.reason
+            ? `<div class="skill-reason">${escapeHtml(item.reason)}</div>`
+            : "";
+          return `<li>
+              <a href="${escapeHtml(item.href)}"> ${escapeHtml(item.text)} </a>
+              ${reasonBlock}
+            </li>`;
+        })
         .join("")}
     </ul>`;
+  document.getElementById("copyButton").addEventListener("click", () => {
+    copyToClipboard(skillsStr);
+  });
 }
 
 /**
