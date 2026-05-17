@@ -50,6 +50,7 @@ SOURCE TEXT:
 ---
 
 CANDIDATES (JSON). You may ONLY select skills from this list. Copy each "uri" exactly as given. Do not add skills, URIs, or labels that are not in CANDIDATES.
+Some candidates were suggested by semantic matching on the text; others are standard ESCO skills linked to occupations detected in the text. Treat all candidates equally: keep only those clearly supported by the source text.
 {payload}
 
 Instructions:

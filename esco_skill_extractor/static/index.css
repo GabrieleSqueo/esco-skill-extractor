@@ -109,3 +109,24 @@ a {
   font-style: italic;
   line-height: 1.35;
 }
+
+.result-section {
+  margin-top: 1rem;
+}
+
+.result-section h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+  color: #4073af;
+}
+
+.result-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.empty-section {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}

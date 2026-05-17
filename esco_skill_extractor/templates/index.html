@@ -26,33 +26,22 @@
     <div class="container">
       <h1>ESCO Skill Extractor</h1>
       <form>
-        <!-- Entity to extract -->
-        <fieldset>
-          <legend>Choose the entity to extract</legend>
-          <label>
-            Skills
-            <input type="radio" name="entity" value="skills" checked />
-          </label>
-          <label>
-            Occupations
-            <input type="radio" name="entity" value="occupations" />
-          </label>
-        </fieldset>
-        <!-- Text -->
         <textarea
           id="text"
-          placeholder="Paste your text here to extract skills or occupations."
+          placeholder="Paste your text here to extract ESCO skills and occupations."
           rows="20"
         ></textarea>
-        <!-- Submit -->
         <button
           id="submit-button"
           type="submit"
           onclick="extractEntity(event)"
-        ></button>
+        >
+          Extract skills and occupations
+        </button>
       </form>
-      <!-- Output -->
-      <output id="output"> </output>
+      <output id="output">
+        Extracted skills and occupations will appear here
+      </output>
     </div>
   </body>
 </html>

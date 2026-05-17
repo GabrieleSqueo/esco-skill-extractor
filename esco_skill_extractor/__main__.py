@@ -118,6 +118,74 @@ def index():
     return render_template("index.html", host=args.host, port=args.port)
 
 
+def _apply_gemini_to_skills(texts: list, skills_per_text: list) -> list:
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        log.info("Filtro Gemini: saltato — GEMINI_API_KEY non impostata")
+        return skills_per_text
+
+    log.info(
+        "Filtro Gemini (modello=%s) sulle skill per testo…",
+        args.gemini_model,
+    )
+    refined = []
+    for idx, (text, skills) in enumerate(zip(texts, skills_per_text)):
+        log.info(
+            "  Testo %d/%d: invio a Gemini %d candidat%s (skill)",
+            idx + 1,
+            len(texts),
+            len(skills),
+            "o" if len(skills) == 1 else "i",
+        )
+        refined.append(
+            refine_skills_with_gemini(
+                text or "",
+                skills,
+                api_key=api_key,
+                model_name=args.gemini_model,
+            )
+        )
+    return refined
+
+
+@app.route("/extract", methods=["POST"])
+def extract_all():
+    texts = request.json
+    if not isinstance(texts, list):
+        return jsonify({"error": "Expected a JSON array of strings (one or more texts)."}), 400
+
+    log.info("POST /extract: ricevuti %d testo/i", len(texts))
+    log.info(
+        "Step 1/3: estrazione skill + occupazioni + skill da occupazioni (similarity + API ESCO)…"
+    )
+    results = extractor.extract(texts)
+    n_skills = sum(len(r["skills"]) for r in results)
+    n_occ = sum(len(r["occupations"]) for r in results)
+    log.info(
+        "Step 1/3: completato — %d skill candidate (testo + occupazioni) e %d occupazioni",
+        n_skills,
+        n_occ,
+    )
+
+    skills_only = [r["skills"] for r in results]
+    refined_skills = _apply_gemini_to_skills(texts, skills_only)
+    for row, skills in zip(results, refined_skills):
+        row["skills"] = skills
+
+    if os.environ.get("GEMINI_API_KEY"):
+        n_out = sum(len(r["skills"]) for r in results)
+        log.info(
+            "Step 2/3: filtro Gemini skill completato — %d skill (prima: %d)",
+            n_out,
+            n_skills,
+        )
+    else:
+        log.info("Step 2/3: saltato — nessun filtro LLM sulle skill")
+
+    log.info("Step 3/3: risposta pronta")
+    return jsonify(results)
+
+
 @app.route("/extract-skills", methods=["POST"])
 def extract():
     texts = request.json
@@ -134,39 +202,16 @@ def extract():
         len(raw),
     )
 
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        log.info("Step 2/3: saltato — GEMINI_API_KEY non impostata, nessun filtro LLM")
-        log.info("Step 3/3: risposta pronta (solo estrazione)")
-        return jsonify(raw)
-
-    log.info(
-        "Step 2/3: filtro Gemini (modello=%s) sui candidati per testo…",
-        args.gemini_model,
-    )
-    refined = []
-    for idx, (text, skills) in enumerate(zip(texts, raw)):
+    refined = _apply_gemini_to_skills(texts, raw)
+    if os.environ.get("GEMINI_API_KEY"):
+        n_out = sum(len(x) for x in refined)
         log.info(
-            "  Testo %d/%d: invio a Gemini %d candidat%s",
-            idx + 1,
-            len(texts),
-            len(skills),
-            "o" if len(skills) == 1 else "i",
+            "Step 2/3: completato — %d skill dopo filtro Gemini (prima: %d)",
+            n_out,
+            n_cand,
         )
-        refined.append(
-            refine_skills_with_gemini(
-                text or "",
-                skills,
-                api_key=api_key,
-                model_name=args.gemini_model,
-            )
-        )
-    n_out = sum(len(x) for x in refined)
-    log.info(
-        "Step 2/3: completato — %d skill dopo filtro Gemini (prima: %d)",
-        n_out,
-        n_cand,
-    )
+    else:
+        log.info("Step 2/3: saltato — GEMINI_API_KEY non impostata")
     log.info("Step 3/3: risposta pronta")
     return jsonify(refined)
 
